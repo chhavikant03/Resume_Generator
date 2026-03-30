@@ -1,0 +1,605 @@
+
+
+// Live Preview Bindings
+function bindInputToPreview(inputId, previewId, isLink = false) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+
+    input.addEventListener("input", () => {
+        if (isLink && input.value) {
+            preview.innerHTML = `<a href="${input.value}" target="_blank">${input.value}</a>`;
+        } else {
+            preview.textContent = input.value;
+        }
+    });
+}
+
+bindInputToPreview("input-name", "preview-name");
+bindInputToPreview("input-email", "preview-email");
+bindInputToPreview("input-phone", "preview-phone");
+bindInputToPreview("input-linkedin", "preview-linkedin", true);
+bindInputToPreview("input-github", "preview-github", true);
+bindInputToPreview("input-about", "preview-about");
+bindInputToPreview("input-languages", "preview-languages");
+bindInputToPreview("input-frameworks", "preview-frameworks");
+bindInputToPreview("input-tools", "preview-tools");
+bindInputToPreview("input-platforms", "preview-platforms");
+bindInputToPreview("input-soft-skills", "preview-soft-skills");
+
+// handles live character counting
+function setupCharacterCounter(inputId) {
+    const inputElement = document.getElementById(inputId);
+    const charCountElement = document.getElementById(`charCount-${inputId}`);
+    if (inputElement && charCountElement) {
+        const maxLength = inputElement.getAttribute('maxlength');
+        const updateCount = () => {
+            const currentLength = inputElement.value.length;
+            charCountElement.textContent = `${currentLength}/${maxLength} characters`;
+            if (currentLength > maxLength) {
+                charCountElement.classList.add('exceeded');
+            } else {
+                charCountElement.classList.remove('exceeded');
+            }
+        };
+        updateCount();
+        inputElement.addEventListener('input', updateCount);
+    }
+}
+setupCharacterCounter("input-about");
+
+// Dynamic Section Helpers
+function createRemoveBtn() {
+    const btn = document.createElement("button");
+    btn.className = "remove-btn";
+    btn.textContent = "Remove";
+    return btn;
+}
+
+function handleAddSection(buttonId, containerId, inputClass, previewContainerId, generateHTML) {
+    const button = document.getElementById(buttonId);
+    const container = document.getElementById(containerId);
+    const previewContainer = document.getElementById(previewContainerId);
+
+    button.addEventListener("click", () => {
+        const original = container.querySelector(`.${inputClass}`);
+        const clone = original.cloneNode(true);
+        clone.querySelectorAll("input, textarea").forEach(input => input.value = "");
+        const removeBtn = createRemoveBtn();
+
+        removeBtn.addEventListener("click", () => {
+            clone.remove();
+            updatePreviewList(container, previewContainer, inputClass, generateHTML);
+        });
+
+        clone.appendChild(removeBtn);
+        container.appendChild(clone);
+    });
+
+    container.addEventListener("input", () => {
+        updatePreviewList(container, previewContainer, inputClass, generateHTML);
+    });
+}
+
+function updatePreviewList(container, previewContainer, inputClass, generateHTML) {
+    const entries = container.querySelectorAll(`.${inputClass}`);
+    previewContainer.innerHTML = "";
+
+    entries.forEach(entry => {
+        const html = generateHTML(entry);
+        if (html) previewContainer.innerHTML += html;
+    });
+}
+
+// Education Section
+handleAddSection(
+    "add-education", "education-inputs", "education-inputs", "preview-education",
+    (entry) => {
+        const inst = entry.querySelector(".education-institution").value;
+        const deg = entry.querySelector(".education-degree").value;
+        const gpa = entry.querySelector(".education-gpa").value;
+        const loc = entry.querySelector(".education-location").value;
+        const dates = entry.querySelector(".education-dates").value;
+        if (inst || deg || gpa || loc || dates) {
+            return `<li><strong>${inst}</strong>, ${deg}<br>GPA: ${gpa} | ${loc} | ${dates}</li>`;
+        }
+        return "";
+    }
+);
+
+// Experience Section
+handleAddSection(
+    "add-experience", "experience-inputs", "experience-inputs", "preview-experience",
+    (entry) => {
+        const role = entry.querySelector(".experience-role").value;
+        const comp = entry.querySelector(".experience-company").value;
+        const link = entry.querySelector(".experience-link").value;
+        const dates = entry.querySelector(".experience-dates").value;
+        const desc = entry.querySelector(".experience-desc").value.trim().split("\n").filter(l => l).map(l => `<li>${l}</li>`).join("");
+
+        if (role || comp || dates || desc) {
+            return `
+                <li>
+                    <strong>${role}</strong>, <a href="${link}" target="_blank">${comp}</a> | ${dates}
+                    <ul>${desc}</ul>
+                </li>
+            `;
+        }
+        return "";
+    }
+);
+
+// Certificates Section
+handleAddSection(
+    "add-certificate", "certifications-inputs", "certifications-inputs", "preview-cert",
+    (entry) => {
+        const title = entry.querySelector(".certificate-title").value;
+        const issuer = entry.querySelector(".certificate-issuer").value;
+        const date = entry.querySelector(".certificate-date").value;
+        const desc = entry.querySelector(".certificate-desc").value.trim().split("\n").filter(l => l).map(l => `<li>${l}</li>`).join("");
+
+        if (title || issuer || date || desc) {
+            return `
+                <li>
+                    <strong>${title}</strong> (${issuer}) | ${date}
+                    <ul>${desc}</ul>
+                </li>
+            `;
+        }
+        return "";
+    }
+);
+
+// Projects Section
+handleAddSection(
+    "add-project", "projects-inputs", "project-input", "preview-projects",
+    (entry) => {
+        const title = entry.querySelector(".project-title").value;
+        const link = entry.querySelector(".project-link").value;
+        const desc = entry.querySelector(".project-desc").value.trim().split("\n").filter(l => l).map(l => `<li>${l}</li>`).join("");
+
+        if (title || link || desc) {
+            return `
+                <li>
+                    <strong>${title}</strong>
+                    <div class="project-links"><a href="${link}" target="_blank">LINK</a></div>
+                    <ul>${desc}</ul>
+                </li>
+            `;
+        }
+        return "";
+    }
+);
+
+
+// --- GLOBAL FUNCTIONS FOR VALIDATION ---
+function clearErrors() {
+    document.querySelectorAll('.error-message').forEach(span => {
+        span.textContent = '';
+    });
+}
+function clearErrors() {
+    const errorFields = document.querySelectorAll(".error-message");
+    errorFields.forEach(field => field.textContent = "");
+}
+
+function validateForm() {
+    clearErrors();
+
+    let isValid = true;
+    let incompleteFields = [];
+
+    const nameInput = document.getElementById('input-name');
+    if (nameInput.value.trim().length < 3) {
+        document.getElementById('error-name').textContent = 'Full Name must be at least 3 characters.';
+        isValid = false;
+        incompleteFields.push("Full Name");
+    }
+
+    const emailInput = document.getElementById('input-email');
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(emailInput.value.trim())) {
+        document.getElementById('error-email').textContent = 'Please enter a valid email address.';
+        isValid = false;
+        incompleteFields.push("Email");
+    }
+
+    const phoneInput = document.getElementById('input-phone');
+    const phonePattern = /^\+?[0-9\s-]{10,}$/;
+    if (!phonePattern.test(phoneInput.value.trim())) {
+        document.getElementById('error-phone').textContent = 'Please enter a valid phone number.';
+        isValid = false;
+        incompleteFields.push("Phone");
+    }
+
+    const linkedinInput = document.getElementById('input-linkedin');
+    const linkedinPattern = /^(https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?)$/i;
+    if (linkedinInput.value.trim() && !linkedinPattern.test(linkedinInput.value.trim())) {
+        document.getElementById('error-linkedin').textContent = 'Please enter a valid LinkedIn URL.';
+        isValid = false;
+        incompleteFields.push("LinkedIn");
+    }
+
+    const githubInput = document.getElementById('input-github');
+    const githubPattern = /^(https?:\/\/(www\.)?github\.com\/[a-zA-Z0-9_-]+\/?)$/i;
+    if (githubInput.value.trim() && !githubPattern.test(githubInput.value.trim())) {
+        document.getElementById('error-github').textContent = 'Please enter a valid GitHub URL.';
+        isValid = false;
+        incompleteFields.push("GitHub");
+    }
+
+    const aboutInput = document.getElementById('input-about');
+    if (aboutInput.value.trim().length < 50) {
+        document.getElementById('error-about').textContent = 'Professional Summary should be at least 50 characters.';
+        isValid = false;
+        incompleteFields.push("Professional Summary");
+    }
+
+    // If all good, return true
+    if (isValid) return true;
+
+    // Else ask user if they want to proceed anyway
+    return confirm("Please correct the highlighted errors in the form before downloading your resume.");
+}
+
+
+
+document.getElementById("downloadBtn").addEventListener("click", () => {
+    if (!validateForm()) return;
+
+// --- PDF Download Button ---
+
+    const content = document.querySelector('#resume-sections');
+    const options = {
+        margin: 0.5,
+        filename: 'resume.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().from(content).set(options).save();
+
+})
+
+// --- DOCX Download Button ---
+document.getElementById("downloadDocxBtn").addEventListener("click", () => {
+    if (!validateForm()) return;
+
+    const resumeContent = document.querySelector('#resume-sections').cloneNode(true);
+    const preHtml = `
+        <html>
+        <head><meta charset='utf-8'></head>
+        <body>`;
+    const postHtml = "</body></html>";
+    const html = preHtml + resumeContent.innerHTML + postHtml;
+
+    const blob = new Blob(['\ufeff', html], {
+        type: 'application/msword'
+    });
+
+    const url = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(html);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = 'resume.doc';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+});
+
+
+// --- DOMContentLoaded Listener for fade-in animations ---
+document.addEventListener("DOMContentLoaded", () => {
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add("show");
+                observer.unobserve(entry.target); // Animate only once
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+
+    document.querySelectorAll(".fade-in").forEach(el => {
+        observer.observe(el);
+    });
+});
+window.history.scrollRestoration = "manual";
+window.scrollTo(0, 0);
+if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Run observer code if motion is not reduced
+}
+
+// --- Theme Toggle functionality ---
+const toggle = document.getElementById('themeToggle');
+const icon = toggle.querySelector('i');
+
+// Check localStorage on load
+window.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme');
+
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark');
+        icon.classList.remove('fa-sun'); // Ensure sun is not there
+        icon.classList.add('fa-moon');   // Add moon for dark mode
+        icon.style.color='white';
+    } else {
+        document.body.classList.remove('dark'); // Ensure light mode
+        icon.classList.remove('fa-moon'); // Ensure moon is not there
+        icon.classList.add('fa-sun');    // Add sun for light mode
+        icon.style.color='#FFB300';
+    }
+});
+
+toggle.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('dark');
+
+    if (isDark) {
+        icon.classList.remove('fa-sun');   // Remove sun
+        icon.classList.add('fa-moon');     // Add moon for dark mode
+        icon.style.color = 'white';
+        localStorage.setItem('theme', 'dark');
+    } else {
+        icon.classList.remove('fa-moon');  // Remove moon
+        icon.classList.add('fa-sun');      // Add sun for light mode
+        icon.style.color = '#FFB300';
+        localStorage.setItem('theme', 'light');
+    }
+});
+// back to top section
+const backToTopButton = document.getElementById('backToTop');
+
+        // Show/hide button based on scroll position
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('show');
+            } else {
+                backToTopButton.classList.remove('show');
+            }
+        });
+
+        // Smooth scroll to top when button is clicked
+        backToTopButton.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Optional: Add keyboard support (Enter or Space key)
+        backToTopButton.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+        });
+// --- Draggable Resume Section Reordering ---
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("resume-sections");
+    let draggedItem = null;
+
+    container.addEventListener("dragstart", function (e) {
+        if (e.target.classList.contains("section")) {
+            draggedItem = e.target;
+            e.target.classList.add("dragging");
+        }
+    });
+
+    container.addEventListener("dragend", function (e) {
+        if (draggedItem) {
+            draggedItem.classList.remove("dragging");
+            saveCurrentOrder(); // Save new order
+            draggedItem = null;
+        }
+    });
+
+    container.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(container, e.clientY);
+        if (draggedItem && afterElement == null) {
+            container.appendChild(draggedItem);
+        } else if (draggedItem && afterElement) {
+            container.insertBefore(draggedItem, afterElement);
+        }
+    });
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll(".section:not(.dragging)")];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+});
+
+
+function bindInputToPreview(inputId, previewId, isLink = false) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+
+    input.addEventListener("input", () => {
+        const value = input.value.trim();
+
+        if (previewId === 'preview-email') {
+            preview.textContent = value ? `Email: ${value}` : '';
+        } else if (previewId === 'preview-phone') {
+            preview.textContent = value ? `Phone: ${value}` : '';
+        } else if (isLink && value) {
+            let label = 'Link';
+            if (previewId === 'preview-linkedin') label = 'LinkedIn';
+            else if (previewId === 'preview-github') label = 'GitHub';
+
+            preview.innerHTML = `<a href="${value}" target="_blank">${label}</a>`;
+        } else {
+            preview.textContent = value;
+        }
+    });
+}
+
+const scrollUpBtn = document.querySelector(".scroll-up-btn");
+
+scrollUpBtn.addEventListener("click", () => {
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+});
+
+/*  // Undo Button
+  document.getElementById("undoBtn").addEventListener("click", () => {
+    if (undoStack.length > 1) {
+      const current = undoStack.pop();
+      redoStack.push(current);
+      restoreOrder(undoStack[undoStack.length - 1]);
+    }
+  });
+
+  // Redo Button
+  document.getElementById("redoBtn").addEventListener("click", () => {
+    if (redoStack.length > 0) {
+      const next = redoStack.pop();
+      undoStack.push(next);
+      restoreOrder(next);
+    }
+  }); */
+
+// Storing Inputs to SessionStorage
+function saveToSessionStorage(id) {
+    const input = document.getElementById(id)
+    if (input) {
+        input.addEventListener("input", () => {
+            sessionStorage.setItem(id, input.value)
+        })
+    }
+}
+
+function loadFromSessionStorage(id) {
+    const input = document.getElementById(id)
+    const storedInput = sessionStorage.getItem(id)
+
+    if (input && (storedInput != null)) {
+        input.value = storedInput
+        input.dispatchEvent(new Event("input"))
+    }
+
+}
+document.addEventListener("DOMContentLoaded", () => {
+    const inputIds = [
+        "input-name",
+        "input-email",
+        "input-phone",
+        "input-linkedin",
+        "input-github",
+        "input-about",
+        "input-languages",
+        "input-frameworks",
+        "input-tools",
+        "input-platforms",
+        "input-soft-skills",
+        "education-institution",
+        "education-degree",
+        "education-gpa",
+        "education-location",
+        "education-dates",
+        "experience-role",
+        "experience-company",
+        "experience-link",
+        "experience-dates",
+        "certificate-title",
+        "certificate-issuer",
+        "certificate-date",
+        "project-title",
+        "project-link",
+        "experience-desc",
+        "certificate-desc",
+        "project-desc",
+    ];
+
+    const textareaClass = [
+        "",
+    ]
+
+    inputIds.forEach(id => {
+        saveToSessionStorage(id); 
+        loadFromSessionStorage(id); 
+    });
+});
+
+function clearAndReload() {
+  sessionStorage.clear();        
+  window.location.reload();
+}
+
+async function improveText(textareaId) {
+  const textarea = document.getElementById(textareaId);
+  const suggestionBox = document.getElementById(`suggestion-${textareaId}`);
+  let text = textarea.value;
+
+  // Show loading state
+  suggestionBox.classList.add("loading");
+  suggestionBox.style.display = "block";
+  suggestionBox.innerText = "Checking for improvements...";
+
+  try {
+    let improved = text;
+    let hasMoreErrors = true;
+    let safetyCounter = 0; // Avoid infinite loop
+
+    while (hasMoreErrors && safetyCounter < 5) {
+      const response = await fetch("https://api.languagetool.org/v2/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams({
+          text: improved,
+          language: "en-US"
+        })
+      });
+
+      const data = await response.json();
+      const matches = data.matches;
+
+      if (matches.length === 0) {
+        hasMoreErrors = false;
+        break;
+      }
+
+      // Fix matches from last to first
+      matches
+        .sort((a, b) => b.offset - a.offset)
+        .forEach(match => {
+          if (match.replacements.length > 0) {
+            const replacement = match.replacements[0].value;
+            improved =
+              improved.slice(0, match.offset) +
+              replacement +
+              improved.slice(match.offset + match.length);
+          }
+        });
+
+      safetyCounter++;
+    }
+
+    suggestionBox.classList.remove("loading");
+
+    if (improved !== text) {
+      suggestionBox.innerHTML = `✨ <strong>Suggested:</strong> "${improved}"`;
+    } else {
+      suggestionBox.innerText = "✅ Your text looks good!";
+    }
+
+  } catch (error) {
+    suggestionBox.classList.remove("loading");
+    suggestionBox.innerText = "❌ Error checking grammar.";
+    console.error(error);
+  }
+}
+
